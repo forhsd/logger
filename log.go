@@ -340,7 +340,6 @@ func (is *LocalLogger) Trace(format string, v ...interface{}) {
 	is.writeMsg(LevelTrace, format, v...)
 }
 
-// NOSONAR
 func (is *LocalLogger) Close() {
 
 	for _, l := range is.outputs {
@@ -351,10 +350,9 @@ func (is *LocalLogger) Close() {
 }
 
 func (is *LocalLogger) Reset() {
-	for _, l := range is.outputs {
-		l.Destroy()
-	}
-	is.outputs = nil
+
+	is.Close()
+
 }
 
 func (is *LocalLogger) SetCallDepth(depth int) {
