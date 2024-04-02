@@ -1,12 +1,12 @@
 package logger
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 type brush func(string) string
@@ -19,7 +19,7 @@ func newBrush(color string) brush {
 	}
 }
 
-//鉴于终端的通常使用习惯，一般白色和黑色字体是不可行的,所以30,37不可用，
+// 鉴于终端的通常使用习惯，一般白色和黑色字体是不可行的,所以30,37不可用，
 var colors = []brush{
 	newBrush("1;41"), // Emergency          红色底
 	newBrush("1;35"), // Alert              紫色
@@ -42,11 +42,12 @@ func (c *consoleLogger) Init(jsonConfig string) error {
 	if len(jsonConfig) == 0 {
 		return nil
 	}
-	if jsonConfig != "{}" {
-		fmt.Fprintf(os.Stdout, "consoleLogger Init:%s\n", jsonConfig)
-	}
 
-	err := json.Unmarshal([]byte(jsonConfig), c)
+	// if jsonConfig != "{}" {
+	// 	fmt.Fprintf(os.Stdout, "consoleLogger Init:%s\n", jsonConfig)
+	// }
+
+	err := sonic.Unmarshal([]byte(jsonConfig), c)
 	if runtime.GOOS == "windows" {
 		c.Colorful = false
 	}
@@ -78,7 +79,7 @@ func (c *consoleLogger) Destroy() {
 
 }
 
-func (c *consoleLogger) printlnConsole(when time.Time, msg string) {
+func (c *consoleLogger) printlnConsole(_ time.Time, msg string) {
 	c.Lock()
 	defer c.Unlock()
 	os.Stdout.Write(append([]byte(msg), '\n'))

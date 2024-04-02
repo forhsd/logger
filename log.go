@@ -1,14 +1,15 @@
 package logger
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 // 默认日志输出
@@ -118,7 +119,7 @@ func NewLogger(depth ...int) *LocalLogger {
 	return l
 }
 
-//配置文件
+// 配置文件
 type logConfig struct {
 	TimeFormat string         `json:"TimeFormat"`
 	Console    *consoleLogger `json:"Console,omitempty"`
@@ -130,20 +131,20 @@ func init() {
 	defaultLogger = NewLogger(3)
 }
 
-func (this *LocalLogger) SetLogger(adapterName string, configs ...string) error {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+func (is *LocalLogger) SetLogger(adapterName string, configs ...string) error {
+	is.lock.Lock()
+	defer is.lock.Unlock()
 
-	if !this.init {
-		this.outputs = []*nameLogger{}
-		this.init = true
+	if !is.init {
+		is.outputs = []*nameLogger{}
+		is.init = true
 	}
 
 	config := append(configs, "{}")[0]
 	var num int = -1
 	var i int
 	var l *nameLogger
-	for i, l = range this.outputs {
+	for i, l = range is.outputs {
 		if l.name == adapterName {
 			if l.config == config {
 				//配置没有变动，不重新设置
@@ -166,38 +167,38 @@ func (this *LocalLogger) SetLogger(adapterName string, configs ...string) error 
 		return err
 	}
 	if num >= 0 {
-		this.outputs[i] = &nameLogger{name: adapterName, Logger: logger, config: config}
+		is.outputs[i] = &nameLogger{name: adapterName, Logger: logger, config: config}
 		return nil
 	}
-	this.outputs = append(this.outputs, &nameLogger{name: adapterName, Logger: logger, config: config})
+	is.outputs = append(is.outputs, &nameLogger{name: adapterName, Logger: logger, config: config})
 	return nil
 }
 
-func (this *LocalLogger) DelLogger(adapterName string) error {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+func (is *LocalLogger) DelLogger(adapterName string) error {
+	is.lock.Lock()
+	defer is.lock.Unlock()
 	outputs := []*nameLogger{}
-	for _, lg := range this.outputs {
+	for _, lg := range is.outputs {
 		if lg.name == adapterName {
 			lg.Destroy()
 		} else {
 			outputs = append(outputs, lg)
 		}
 	}
-	if len(outputs) == len(this.outputs) {
+	if len(outputs) == len(is.outputs) {
 		return fmt.Errorf("logs: unknown adaptername %s (forgotten Register?)", adapterName)
 	}
-	this.outputs = outputs
+	is.outputs = outputs
 	return nil
 }
 
 // 设置日志起始路径
-func (this *LocalLogger) SetLogPathTrim(trimPath string) {
-	this.usePath = trimPath
+func (is *LocalLogger) SetLogPathTrim(trimPath string) {
+	is.usePath = trimPath
 }
 
-func (this *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int) {
-	for _, l := range this.outputs {
+func (is *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int) {
+	for _, l := range is.outputs {
 		if l.name == AdapterConn {
 			//网络日志，使用json格式发送,此处使用结构体，用于类似ElasticSearch功能检索
 			err := l.LogWrite(when, msg, level)
@@ -207,7 +208,7 @@ func (this *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int)
 			continue
 		}
 
-		msgStr := when.Format(this.timeFormat) + " [" + msg.Level + "] " + "[" + msg.Path + "] " + msg.Content
+		msgStr := when.Format(is.timeFormat) + " [" + msg.Level + "] " + "[" + msg.Path + "] " + msg.Content
 		err := l.LogWrite(when, msgStr, level)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to WriteMsg to adapter:%v,error:%v\n", l.name, err)
@@ -215,9 +216,9 @@ func (this *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int)
 	}
 }
 
-func (this *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) error {
-	if !this.init {
-		this.SetLogger(AdapterConsole)
+func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) error {
+	if !is.init {
+		is.SetLogger(AdapterConsole)
 	}
 	msgSt := new(loginfo)
 	src := ""
@@ -225,10 +226,10 @@ func (this *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) er
 		msg = fmt.Sprintf(msg, v...)
 	}
 	when := time.Now()
-	_, file, lineno, ok := runtime.Caller(this.callDepth)
+	_, file, lineno, ok := runtime.Caller(is.callDepth)
 	var strim string = "src/"
-	if this.usePath != "" {
-		strim = this.usePath
+	if is.usePath != "" {
+		strim = is.usePath
 	}
 	if ok {
 
@@ -239,81 +240,125 @@ func (this *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) er
 	msgSt.Level = levelPrefix[logLevel]
 	msgSt.Path = src
 	msgSt.Content = msg
-	msgSt.Name = this.appName
-	msgSt.Time = when.Format(this.timeFormat)
-	this.writeToLoggers(when, msgSt, logLevel)
+	msgSt.Name = is.appName
+	msgSt.Time = when.Format(is.timeFormat)
+	is.writeToLoggers(when, msgSt, logLevel)
 
 	return nil
 }
 
-func (this *LocalLogger) Fatal(format string, args ...interface{}) {
-	this.Emer("###Exec Panic:"+format, args...)
+// 传入调用位置
+func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v ...interface{}) error {
+	if !is.init {
+		is.SetLogger(AdapterConsole)
+	}
+	msgSt := new(loginfo)
+	src := ""
+	if len(v) > 0 {
+		msg = fmt.Sprintf(msg, v...)
+	}
+	when := time.Now()
+
+	if path != "" {
+		msgSt.Path = path
+	} else {
+		_, file, lineno, ok := runtime.Caller(is.callDepth)
+		var strim string = "src/"
+		if is.usePath != "" {
+			strim = is.usePath
+		}
+		if ok {
+
+			src = strings.Replace(
+				fmt.Sprintf("%s:%d", stringTrim(file, strim), lineno), "%2e", ".", -1)
+		}
+		msgSt.Path = src
+	}
+
+	msgSt.Level = levelPrefix[logLevel]
+
+	msgSt.Content = msg
+	msgSt.Name = is.appName
+	msgSt.Time = when.Format(is.timeFormat)
+	is.writeToLoggers(when, msgSt, logLevel)
+
+	return nil
+}
+
+func (is *LocalLogger) Fatal(format string, args ...interface{}) {
+	is.Emer("###Exec Panic:"+format, args...)
 	os.Exit(1)
 }
 
-func (this *LocalLogger) Panic(format string, args ...interface{}) {
-	this.Emer("###Exec Panic:"+format, args...)
+func (is *LocalLogger) Panic(format string, args ...interface{}) {
+	is.Emer("###Exec Panic:"+format, args...)
 	panic(fmt.Sprintf(format, args...))
 }
 
 // Emer Log EMERGENCY level message.
-func (this *LocalLogger) Emer(format string, v ...interface{}) {
-	this.writeMsg(LevelEmergency, format, v...)
+func (is *LocalLogger) Emer(format string, v ...interface{}) {
+	is.writeMsg(LevelEmergency, format, v...)
 }
 
 // Alert Log ALERT level message.
-func (this *LocalLogger) Alert(format string, v ...interface{}) {
-	this.writeMsg(LevelAlert, format, v...)
+func (is *LocalLogger) Alert(format string, v ...interface{}) {
+	is.writeMsg(LevelAlert, format, v...)
 }
 
 // Crit Log CRITICAL level message.
-func (this *LocalLogger) Crit(format string, v ...interface{}) {
-	this.writeMsg(LevelCritical, format, v...)
+func (is *LocalLogger) Crit(format string, v ...interface{}) {
+	is.writeMsg(LevelCritical, format, v...)
 }
 
 // Error Log ERROR level message.
-func (this *LocalLogger) Error(format string, v ...interface{}) {
-	this.writeMsg(LevelError, format, v...)
+func (is *LocalLogger) Error(format string, v ...interface{}) {
+	is.writeMsg(LevelError, format, v...)
+}
+
+// 打印上任调用位置
+func (is *LocalLogger) ErrorWithCall(path string, format string, v ...interface{}) {
+	is.writeMsgWithCall(path, LevelError, format, v...)
 }
 
 // Warn Log WARNING level message.
-func (this *LocalLogger) Warn(format string, v ...interface{}) {
-	this.writeMsg(LevelWarning, format, v...)
+func (is *LocalLogger) Warn(format string, v ...interface{}) {
+	is.writeMsg(LevelWarning, format, v...)
 }
 
 // Info Log INFO level message.
-func (this *LocalLogger) Info(format string, v ...interface{}) {
-	this.writeMsg(LevelInformational, format, v...)
+func (is *LocalLogger) Info(format string, v ...interface{}) {
+	is.writeMsg(LevelInformational, format, v...)
 }
 
 // Debug Log DEBUG level message.
-func (this *LocalLogger) Debug(format string, v ...interface{}) {
-	this.writeMsg(LevelDebug, format, v...)
+func (is *LocalLogger) Debug(format string, v ...interface{}) {
+	is.writeMsg(LevelDebug, format, v...)
 }
 
 // Trace Log TRAC level message.
-func (this *LocalLogger) Trace(format string, v ...interface{}) {
-	this.writeMsg(LevelTrace, format, v...)
+func (is *LocalLogger) Trace(format string, v ...interface{}) {
+	is.writeMsg(LevelTrace, format, v...)
 }
 
-func (this *LocalLogger) Close() {
+// NOSONAR
+func (is *LocalLogger) Close() {
 
-	for _, l := range this.outputs {
+	for _, l := range is.outputs {
 		l.Destroy()
 	}
-	this.outputs = nil
+	is.outputs = nil
 
 }
 
-func (this *LocalLogger) Reset() {
-	for _, l := range this.outputs {
+func (is *LocalLogger) Reset() {
+	for _, l := range is.outputs {
 		l.Destroy()
 	}
-	this.outputs = nil
+	is.outputs = nil
 }
 
-func (this *LocalLogger) SetCallDepth(depth int) {
-	this.callDepth = depth
+func (is *LocalLogger) SetCallDepth(depth int) {
+	is.callDepth = depth
 }
 
 // GetlocalLogger returns the defaultLogger
@@ -332,7 +377,7 @@ func SetLogPathTrim(trimPath string) {
 
 // param 可以是log配置文件名，也可以是log配置内容,默认DEBUG输出到控制台
 func SetLogger(param ...string) error {
-	if 0 == len(param) {
+	if len(param) == 0 {
 		//默认只输出到控制台
 		defaultLogger.SetLogger(AdapterConsole)
 		return nil
@@ -340,7 +385,7 @@ func SetLogger(param ...string) error {
 
 	c := param[0]
 	conf := new(logConfig)
-	err := json.Unmarshal([]byte(c), conf)
+	err := sonic.Unmarshal([]byte(c), conf)
 	if err != nil { //不是json，就认为是配置文件，如果都不是，打印日志，然后退出
 		// Open the configuration file
 		fd, err := os.Open(c)
@@ -350,13 +395,13 @@ func SetLogger(param ...string) error {
 			return err
 		}
 
-		contents, err := ioutil.ReadAll(fd)
+		contents, err := io.ReadAll(fd)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not read %s: %s\n", c, err)
 			os.Exit(1)
 			return err
 		}
-		err = json.Unmarshal(contents, conf)
+		err = sonic.Unmarshal(contents, conf)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Could not Unmarshal %s: %s\n", contents, err)
 			os.Exit(1)
@@ -367,15 +412,15 @@ func SetLogger(param ...string) error {
 		defaultLogger.timeFormat = conf.TimeFormat
 	}
 	if conf.Console != nil {
-		console, _ := json.Marshal(conf.Console)
+		console, _ := sonic.Marshal(conf.Console)
 		defaultLogger.SetLogger(AdapterConsole, string(console))
 	}
 	if conf.File != nil {
-		file, _ := json.Marshal(conf.File)
+		file, _ := sonic.Marshal(conf.File)
 		defaultLogger.SetLogger(AdapterFile, string(file))
 	}
 	if conf.Conn != nil {
-		conn, _ := json.Marshal(conf.Conn)
+		conn, _ := sonic.Marshal(conf.Conn)
 		defaultLogger.SetLogger(AdapterConn, string(conn))
 	}
 	return nil
@@ -411,6 +456,11 @@ func Error(f interface{}, v ...interface{}) {
 	defaultLogger.Error(formatLog(f, v...))
 }
 
+// 打印上任调用位置
+func ErrorWithCall(path string, f interface{}, v ...interface{}) {
+	defaultLogger.ErrorWithCall(path, formatLog(f, v...))
+}
+
 // Warn logs a message at warning level.
 func Warn(f interface{}, v ...interface{}) {
 	defaultLogger.Warn(formatLog(f, v...))
@@ -433,9 +483,10 @@ func Trace(f interface{}, v ...interface{}) {
 
 func formatLog(f interface{}, v ...interface{}) string {
 	var msg string
-	switch f.(type) {
+	switch tf := f.(type) {
 	case string:
-		msg = f.(string)
+		// msg = f.(string)
+		msg = tf
 		if len(v) == 0 {
 			return msg
 		}
@@ -457,7 +508,7 @@ func formatLog(f interface{}, v ...interface{}) string {
 
 func stringTrim(s string, cut string) string {
 	ss := strings.SplitN(s, cut, 2)
-	if 1 == len(ss) {
+	if len(ss) == 1 {
 		return ss[0]
 	}
 	return ss[1]

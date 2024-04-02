@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 type connLogger struct {
@@ -28,7 +29,7 @@ func (c *connLogger) Init(jsonConfig string) error {
 		return nil
 	}
 	fmt.Printf("consoleWriter Init:%s\n", jsonConfig)
-	err := json.Unmarshal([]byte(jsonConfig), c)
+	err := sonic.Unmarshal([]byte(jsonConfig), c)
 	if err != nil {
 		return err
 	}
@@ -123,10 +124,10 @@ func (c *connLogger) needToConnectOnMsg() bool {
 	return c.ReconnectOnMsg
 }
 
-func (c *connLogger) println(when time.Time, msg *loginfo) error {
+func (c *connLogger) println(_ time.Time, msg *loginfo) error {
 	c.Lock()
 	defer c.Unlock()
-	ss, err := json.Marshal(msg)
+	ss, err := sonic.Marshal(msg)
 	if err != nil {
 		return err
 	}

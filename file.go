@@ -2,7 +2,6 @@ package logger
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 type fileLogger struct {
@@ -37,21 +38,22 @@ type fileLogger struct {
 
 // Init file logger with json config.
 // jsonConfig like:
-//	{
-//	"filename":"log/app.log",
-//	"maxlines":10000,
-//	"maxsize":1024,
-//	"daily":true,
-//	"maxdays":15,
-//	"rotate":true,
-//  	"permit":"0600"
-//	}
+//
+//		{
+//		"filename":"log/app.log",
+//		"maxlines":10000,
+//		"maxsize":1024,
+//		"daily":true,
+//		"maxdays":15,
+//		"rotate":true,
+//	 	"permit":"0600"
+//		}
 func (f *fileLogger) Init(jsonConfig string) error {
-	fmt.Printf("fileLogger Init:%s\n", jsonConfig)
+	// fmt.Printf("fileLogger Init:%s\n", jsonConfig)
 	if len(jsonConfig) == 0 {
 		return nil
 	}
-	err := json.Unmarshal([]byte(jsonConfig), f)
+	err := sonic.Unmarshal([]byte(jsonConfig), f)
 	if err != nil {
 		return err
 	}
@@ -167,6 +169,7 @@ func (f *fileLogger) lines() (int, error) {
 
 	buf := make([]byte, 32768) // 32k
 	count := 0
+	// var count int64
 	lineSep := []byte{'\n'}
 
 	for {
@@ -215,7 +218,7 @@ func (f *fileLogger) createFreshFile(logTime time.Time) error {
 	}
 
 	if err == nil {
-		return fmt.Errorf("Cannot find free log number to rename %s", f.Filename)
+		return fmt.Errorf("cannot find free log number to rename %s", f.Filename)
 	}
 	f.fileWriter.Close()
 
@@ -238,10 +241,10 @@ RESTART_LOGGER:
 	go f.deleteOldLog()
 
 	if startLoggerErr != nil {
-		return fmt.Errorf("Rotate StartLogger: %s", startLoggerErr)
+		return fmt.Errorf("rotate StartLogger: %s", startLoggerErr)
 	}
 	if err != nil {
-		return fmt.Errorf("Rotate: %s", err)
+		return fmt.Errorf("rotate: %s", err)
 	}
 	return nil
 }
