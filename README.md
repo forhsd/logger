@@ -1,9 +1,11 @@
 # logger
+
 convenient log package
 
-# 1. 使用说明
+## 1. 使用说明
+
 ```go
-    import  "github.com/wonderivan/logger"
+    import  "github.com/forhsd/logger"
 
     // 配置logger，如果不配置时默认为控制台输出，等级为DEBG
     logger.SetLogger(`{"Console": {"level": "DEBG"}`)
@@ -19,11 +21,12 @@ convenient log package
     logger.Alert("this is Alert")
     logger.Emer("this is Emergency")
 ```
+
 输出结果：
 
-![](images/output1.png)
+![xx](images/output1.png)
 
-# 2. 日志等级
+## 2. 日志等级
 
 当前日志输出等级共8种，从0-7对应的等级由高到底，当配置为某个输出等级时，只有大于等于该等级的日志才会输出。不同的输出适配器支持不同的日志等级配置：
 
@@ -38,11 +41,12 @@ convenient log package
 | 6    | DEBG | 用户级调试                                       | 绿色       |
 | 7    | TRAC | 用户级基本输出                                   | 绿色       |
 
+## 3. 配置说明
 
-# 3. 配置说明
 logger当前支持控制台、文件、网络3种方式适配器输出，可以通过各自的参数进行设置，该logger支持多个方式同时输出，如果未配置某项适配器时，则不初始化也不会输出到该适配器。
 
 通过调用logger.SetLogger(config string)方法设置参数，config支持json配置，也支持指定内容为json配置的文件路径，例如：
+
 ```go
     // 通过配置参数直接配置
     logger.SetLogger(`{"Console": {"level": "DEBG"}}`)
@@ -101,40 +105,41 @@ logger当前支持控制台、文件、网络3种方式适配器输出，可以�
 | DEFAULT      | "2006-01-02 15:04:05"                     |
 
 - 时间格式打印：
-```
+
+```shell
 ========RFC1123Z time format========
-Thu, 02 Aug 2018 18:48:04 +0800 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC1123Z
+Thu, 02 Aug 2018 18:48:04 +0800 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC1123Z
 ========Stamp time format========
-Aug  2 18:48:04 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug Stamp
+Aug  2 18:48:04 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug Stamp
 ========StampMilli time format========
-Aug  2 18:48:04.489 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug StampMilli
+Aug  2 18:48:04.489 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug StampMilli
 ========StampNano time format========
-Aug  2 18:48:04.490002155 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug StampNano
+Aug  2 18:48:04.490002155 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug StampNano
 ========RubyDate time format========
-Thu Aug 02 18:48:04 +0800 2018 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RubyDate
+Thu Aug 02 18:48:04 +0800 2018 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RubyDate
 ========RFC822 time format========
-02 Aug 18 18:48 CST [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC822
+02 Aug 18 18:48 CST [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC822
 ========RFC822Z time format========
-02 Aug 18 18:48 +0800 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC822Z
+02 Aug 18 18:48 +0800 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC822Z
 ========RFC1123 time format========
-Thu, 02 Aug 2018 18:48:04 CST [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC1123
+Thu, 02 Aug 2018 18:48:04 CST [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC1123
 ========RFC3339 time format========
-2018-08-02T18:48:04+08:00 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC3339
+2018-08-02T18:48:04+08:00 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC3339
 ========RFC3339Nano time format========
-2018-08-02T18:48:04.490377325+08:00 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC3339Nano
+2018-08-02T18:48:04.490377325+08:00 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC3339Nano
 ========ANSIC time format========
-Thu Aug  2 18:48:04 2018 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug ANSIC
+Thu Aug  2 18:48:04 2018 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug ANSIC
 ========UnixDate time format========
-Thu Aug  2 18:48:04 CST 2018 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug UnixDate
+Thu Aug  2 18:48:04 CST 2018 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug UnixDate
 ========RFC850 time format========
-Thursday, 02-Aug-18 18:48:04 CST [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug RFC850
+Thursday, 02-Aug-18 18:48:04 CST [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug RFC850
 ========Kitchen time format========
-6:48PM [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug Kitchen
+6:48PM [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug Kitchen
 ========StampMicro time format========
-Aug  2 18:48:04.490662 [DEBG] [github.com/wonderivan/logger/log_test.go:115] Debug StampMicro
+Aug  2 18:48:04.490662 [DEBG] [github.com/forhsd/logger/log_test.go:115] Debug StampMicro
 ```
 
-# 4. 其他
+## 4. 其他
 
 1. logger默认是控制台输出，输出等级为DEBG，默认是支持颜色区分的。
 2. 日志文件append为true时，当写入的日志文件发生跨天(daily为true)或超过最大限制时，会创建一个新文件，原有文件格式被重命名为： ****.xxxx-xx-xx.xxx.xxx 格式，例如：当向app.log写入日志时，触发了创建新文件操作，则将app.log重命名为 app.2018-01-01.001.log, 如果此时app.2018-01-01.001.log已经存在，则将刚才的app.log重命名为 app.2018-01-01.002.log，以此类推。
