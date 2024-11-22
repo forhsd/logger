@@ -98,9 +98,9 @@ type LocalLogger struct {
 	init       bool
 	outputs    []*nameLogger
 	appName    string
-	callDepth  int
-	timeFormat string
-	usePath    string
+	CallDepth  int
+	TimeFormat string
+	UsePath    string
 }
 
 func NewLogger(depth ...int) *LocalLogger {
@@ -113,9 +113,9 @@ func NewLogger(depth ...int) *LocalLogger {
 		appSn = "NONE"
 	}
 	l.appName = "[" + appSn + "]"
-	l.callDepth = dep
+	l.CallDepth = dep
 	l.SetLogger(AdapterConsole)
-	l.timeFormat = logTimeDefaultFormat
+	l.TimeFormat = logTimeDefaultFormat
 	return l
 }
 
@@ -194,7 +194,7 @@ func (is *LocalLogger) DelLogger(adapterName string) error {
 
 // 设置日志起始路径
 func (is *LocalLogger) SetLogPathTrim(trimPath string) {
-	is.usePath = trimPath
+	is.UsePath = trimPath
 }
 
 func (is *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int) {
@@ -208,7 +208,7 @@ func (is *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int) {
 			continue
 		}
 
-		msgStr := when.Format(is.timeFormat) + " [" + msg.Level + "] " + "[" + msg.Path + "] " + msg.Content
+		msgStr := when.Format(is.TimeFormat) + " [" + msg.Level + "] " + "[" + msg.Path + "] " + msg.Content
 		err := l.LogWrite(when, msgStr, level)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to WriteMsg to adapter:%v,error:%v\n", l.name, err)
@@ -226,10 +226,10 @@ func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) erro
 		msg = fmt.Sprintf(msg, v...)
 	}
 	when := time.Now()
-	_, file, lineno, ok := runtime.Caller(is.callDepth)
+	_, file, lineno, ok := runtime.Caller(is.CallDepth)
 	var strim string = "src/"
-	if is.usePath != "" {
-		strim = is.usePath
+	if is.UsePath != "" {
+		strim = is.UsePath
 	}
 	if ok {
 
@@ -241,7 +241,7 @@ func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) erro
 	msgSt.Path = src
 	msgSt.Content = msg
 	msgSt.Name = is.appName
-	msgSt.Time = when.Format(is.timeFormat)
+	msgSt.Time = when.Format(is.TimeFormat)
 	is.writeToLoggers(when, msgSt, logLevel)
 
 	return nil
@@ -262,10 +262,10 @@ func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v
 	if path != "" {
 		msgSt.Path = path
 	} else {
-		_, file, lineno, ok := runtime.Caller(is.callDepth)
+		_, file, lineno, ok := runtime.Caller(is.CallDepth)
 		var strim string = "src/"
-		if is.usePath != "" {
-			strim = is.usePath
+		if is.UsePath != "" {
+			strim = is.UsePath
 		}
 		if ok {
 
@@ -279,7 +279,7 @@ func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v
 
 	msgSt.Content = msg
 	msgSt.Name = is.appName
-	msgSt.Time = when.Format(is.timeFormat)
+	msgSt.Time = when.Format(is.TimeFormat)
 	is.writeToLoggers(when, msgSt, logLevel)
 
 	return nil
@@ -356,7 +356,7 @@ func (is *LocalLogger) Reset() {
 }
 
 func (is *LocalLogger) SetCallDepth(depth int) {
-	is.callDepth = depth
+	is.CallDepth = depth
 }
 
 // GetlocalLogger returns the defaultLogger
@@ -407,7 +407,7 @@ func SetLogger(param ...string) error {
 		}
 	}
 	if conf.TimeFormat != "" {
-		defaultLogger.timeFormat = conf.TimeFormat
+		defaultLogger.TimeFormat = conf.TimeFormat
 	}
 	if conf.Console != nil {
 		console, _ := sonic.Marshal(conf.Console)
