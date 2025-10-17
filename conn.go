@@ -43,7 +43,7 @@ func (c *connLogger) Init(jsonConfig string) error {
 	return nil
 }
 
-func (c *connLogger) LogWrite(when time.Time, msgText interface{}, level int) (err error) {
+func (c *connLogger) LogWrite(when time.Time, msgText any, level int) (err error) {
 	if level > c.LogLevel {
 		return nil
 	}

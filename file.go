@@ -81,7 +81,7 @@ func (f *fileLogger) needCreateFresh(size int, day int) bool {
 }
 
 // WriteMsg write logger message into file.
-func (f *fileLogger) LogWrite(when time.Time, msgText interface{}, level int) error {
+func (f *fileLogger) LogWrite(when time.Time, msgText any, level int) error {
 	msg, ok := msgText.(string)
 	if !ok {
 		return nil

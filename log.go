@@ -15,6 +15,10 @@ import (
 // 默认日志输出
 var defaultLogger *LocalLogger
 
+func SetDefaultLogger(log *LocalLogger) {
+	defaultLogger = log
+}
+
 // 日志等级，从0-7，日优先级由高到低
 const (
 	LevelEmergency     = iota // 系统级紧急，比如磁盘出错，内存异常，网络不可用等
@@ -64,7 +68,7 @@ const (
 // log provider interface
 type Logger interface {
 	Init(config string) error
-	LogWrite(when time.Time, msg interface{}, level int) error
+	LogWrite(when time.Time, msg any, level int) error
 	Destroy()
 }
 
@@ -216,7 +220,7 @@ func (is *LocalLogger) writeToLoggers(when time.Time, msg *loginfo, level int) {
 	}
 }
 
-func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) error {
+func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...any) error {
 	if !is.init {
 		is.SetLogger(AdapterConsole)
 	}
@@ -248,7 +252,7 @@ func (is *LocalLogger) writeMsg(logLevel int, msg string, v ...interface{}) erro
 }
 
 // 传入调用位置
-func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v ...interface{}) error {
+func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v ...any) error {
 	if !is.init {
 		is.SetLogger(AdapterConsole)
 	}
@@ -285,58 +289,58 @@ func (is *LocalLogger) writeMsgWithCall(path string, logLevel int, msg string, v
 	return nil
 }
 
-func (is *LocalLogger) Fatal(format string, args ...interface{}) {
+func (is *LocalLogger) Fatal(format string, args ...any) {
 	is.Emer("###Exec Panic:"+format, args...)
 	os.Exit(1)
 }
 
-func (is *LocalLogger) Panic(format string, args ...interface{}) {
+func (is *LocalLogger) Panic(format string, args ...any) {
 	is.Emer("###Exec Panic:"+format, args...)
 	panic(fmt.Sprintf(format, args...))
 }
 
 // Emer Log EMERGENCY level message.
-func (is *LocalLogger) Emer(format string, v ...interface{}) {
+func (is *LocalLogger) Emer(format string, v ...any) {
 	is.writeMsg(LevelEmergency, format, v...)
 }
 
 // Alert Log ALERT level message.
-func (is *LocalLogger) Alert(format string, v ...interface{}) {
+func (is *LocalLogger) Alert(format string, v ...any) {
 	is.writeMsg(LevelAlert, format, v...)
 }
 
 // Crit Log CRITICAL level message.
-func (is *LocalLogger) Crit(format string, v ...interface{}) {
+func (is *LocalLogger) Crit(format string, v ...any) {
 	is.writeMsg(LevelCritical, format, v...)
 }
 
 // Error Log ERROR level message.
-func (is *LocalLogger) Error(format string, v ...interface{}) {
+func (is *LocalLogger) Error(format string, v ...any) {
 	is.writeMsg(LevelError, format, v...)
 }
 
 // 打印上任调用位置
-func (is *LocalLogger) ErrorWithCall(path string, format string, v ...interface{}) {
+func (is *LocalLogger) ErrorWithCall(path string, format string, v ...any) {
 	is.writeMsgWithCall(path, LevelError, format, v...)
 }
 
 // Warn Log WARNING level message.
-func (is *LocalLogger) Warn(format string, v ...interface{}) {
+func (is *LocalLogger) Warn(format string, v ...any) {
 	is.writeMsg(LevelWarning, format, v...)
 }
 
 // Info Log INFO level message.
-func (is *LocalLogger) Info(format string, v ...interface{}) {
+func (is *LocalLogger) Info(format string, v ...any) {
 	is.writeMsg(LevelInformational, format, v...)
 }
 
 // Debug Log DEBUG level message.
-func (is *LocalLogger) Debug(format string, v ...interface{}) {
+func (is *LocalLogger) Debug(format string, v ...any) {
 	is.writeMsg(LevelDebug, format, v...)
 }
 
 // Trace Log TRAC level message.
-func (is *LocalLogger) Trace(format string, v ...interface{}) {
+func (is *LocalLogger) Trace(format string, v ...any) {
 	is.writeMsg(LevelTrace, format, v...)
 }
 
@@ -425,61 +429,61 @@ func SetLogger(param ...string) error {
 }
 
 // Painc logs a message at emergency level and panic.
-func Painc(f interface{}, v ...interface{}) {
+func Painc(f any, v ...any) {
 	defaultLogger.Panic(formatLog(f, v...))
 }
 
 // Fatal logs a message at emergency level and exit.
-func Fatal(f interface{}, v ...interface{}) {
+func Fatal(f any, v ...any) {
 	defaultLogger.Fatal(formatLog(f, v...))
 }
 
 // Emer logs a message at emergency level.
-func Emer(f interface{}, v ...interface{}) {
+func Emer(f any, v ...any) {
 	defaultLogger.Emer(formatLog(f, v...))
 }
 
 // Alert logs a message at alert level.
-func Alert(f interface{}, v ...interface{}) {
+func Alert(f any, v ...any) {
 	defaultLogger.Alert(formatLog(f, v...))
 }
 
 // Crit logs a message at critical level.
-func Crit(f interface{}, v ...interface{}) {
+func Crit(f any, v ...any) {
 	defaultLogger.Crit(formatLog(f, v...))
 }
 
 // Error logs a message at error level.
-func Error(f interface{}, v ...interface{}) {
+func Error(f any, v ...any) {
 	defaultLogger.Error(formatLog(f, v...))
 }
 
 // 打印上任调用位置
-func ErrorWithCall(path string, f interface{}, v ...interface{}) {
+func ErrorWithCall(path string, f any, v ...any) {
 	defaultLogger.ErrorWithCall(path, formatLog(f, v...))
 }
 
 // Warn logs a message at warning level.
-func Warn(f interface{}, v ...interface{}) {
+func Warn(f any, v ...any) {
 	defaultLogger.Warn(formatLog(f, v...))
 }
 
 // Info logs a message at info level.
-func Info(f interface{}, v ...interface{}) {
+func Info(f any, v ...any) {
 	defaultLogger.Info(formatLog(f, v...))
 }
 
 // Notice logs a message at debug level.
-func Debug(f interface{}, v ...interface{}) {
+func Debug(f any, v ...any) {
 	defaultLogger.Debug(formatLog(f, v...))
 }
 
 // Trace logs a message at trace level.
-func Trace(f interface{}, v ...interface{}) {
+func Trace(f any, v ...any) {
 	defaultLogger.Trace(formatLog(f, v...))
 }
 
-func formatLog(f interface{}, v ...interface{}) string {
+func formatLog(f any, v ...any) string {
 	var msg string
 	switch tf := f.(type) {
 	case string:

@@ -60,7 +60,7 @@ func (c *consoleLogger) Init(jsonConfig string) error {
 	return err
 }
 
-func (c *consoleLogger) LogWrite(when time.Time, msgText interface{}, level int) error {
+func (c *consoleLogger) LogWrite(when time.Time, msgText any, level int) error {
 	if level > c.LogLevel {
 		return nil
 	}
